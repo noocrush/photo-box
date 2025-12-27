@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>主页 - 写真匣子</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    /* 页面特定样式 */
+    #model-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-top: 20px; }
+    .model-card { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; transition: transform 0.2s; position: relative; }
+    .model-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    .model-cover { width: 100%; height: 240px; object-fit: cover; background: #f0f0f0; background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xMDAgMjVjNDEuNDIgMCA3NSAzMy41OCA3NSA3NXMtMzMuNTggNzUtNzUgNzVTMjUgMTQxLjQyIDI1IDEwMCA1OC41OCAyNSAxMDAgMjV6bTAgMTIwYzU5LjU4IDAgMTA1LTQ1LjQyIDEwNS0xMDVTMTU5LjU4IDAgMTAwIDBTMjUgNDUuNDIgMjUgMTAwczQ1LjQyIDEwNSAxMDUgMTA1eiIvPjxwYXRoIGQ9Ik0xMDAgNzVWMTgwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvZz48L3N2Zz4='); background-repeat: no-repeat; background-position: center; }
+    .model-info { padding: 10px; text-align: center; }
+    .empty-tip { text-align: center; padding: 50px; color: #999; font-size: 18px; }
+    
+    /* 收藏按钮样式 */
+    .model-favorite-btn, .work-favorite-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 5px;
+      border-radius: 50%;
+      z-index: 10;
+      transition: all 0.2s;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .model-favorite-btn:hover, .work-favorite-btn:hover {
+      background: rgba(0,0,0,0.7);
+      transform: scale(1.1);
+    }
+    
+    .model-favorite-btn.favorited, .work-favorite-btn.favorited {
+      color: #ffd700;
+      background: rgba(255, 215, 0, 0.2);
+    }
+    
+    /* 右键菜单样式 */
+    .context-menu {
+      position: fixed;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: none;
+      min-width: 150px;
+      padding: 8px 0;
+    }
+    
+    .context-menu-item {
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #333;
+      transition: background-color 0.2s;
+    }
+    
+    .context-menu-item:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .context-menu-item:active {
+      background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <!-- 左侧导航栏 -->
+  <nav class="sidebar">
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="index.html" class="nav-link active"><span class="nav-icon">🏠</span> 主页</a></li>
+      <li class="nav-item"><a href="search.html" class="nav-link"><span class="nav-icon">🔍</span> 搜索</a></li>
+      <li class="nav-item"><a href="favorites.html" class="nav-link"><span class="nav-icon">⭐</span> 收藏</a></li>
+      <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span> 设置</a></li>
+      <li class="nav-item"><a href="about.html" class="nav-link"><span class="nav-icon">ℹ️</span> 关于</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>写真匣子</h1>
+      <div>
+        <button id="scan-btn" class="btn scan-btn">扫描文件夹</button>
+        <button id="refresh-btn" class="btn refresh-btn">刷新列表</button>
+      </div>
+    </div>
+
+    <div id="model-grid">
+      <div class="empty-tip">点击上方"扫描文件夹"按钮开始扫描</div>
+    </div>
+  </div>
+
+  <!-- 右键菜单 -->
+  <div class="context-menu" id="model-context-menu">
+    <div class="context-menu-item" id="change-cover">更换封面</div>
+    <div class="context-menu-item" id="delete-model">删除模特</div>
+  </div>
+
+  <script src="scripts/nav-handler.js"></script>
+  <script>
+    // 兼容API调用（核心修复）
+    if (!window.electronAPI) {
+      window.electronAPI = {
+        scanFolder: () => window.require('electron').ipcRenderer.invoke('scanFolder'),
+        getImageBase64: (imagePath) => window.require('electron').ipcRenderer.invoke('getImageBase64', imagePath),
+        saveScanResult: (result) => window.require('electron').ipcRenderer.invoke('save-scan-result', result),
+        loadScanResult: () => window.require('electron').ipcRenderer.invoke('load-scan-result'),
+        showOpenDialog: (options) => window.require('electron').ipcRenderer.invoke('show-open-dialog', options),
+      };
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const modelGrid = document.getElementById('model-grid');
+      
+      // 收藏功能相关函数
+      function getModelFavorites() {
+        try {
+          const favorites = localStorage.getItem('modelFavorites');
+          return favorites ? JSON.parse(favorites) : [];
+        } catch (err) {
+          console.error('获取模特收藏失败：', err);
+          return [];
+        }
+      }
+      
+      function isModelFavorite(modelId) {
+        const favorites = getModelFavorites();
+        return favorites.includes(modelId);
+      }
+      
+      function addModelFavorite(modelId) {
+        try {
+          const favorites = getModelFavorites();
+          if (!favorites.includes(modelId)) {
+            favorites.push(modelId);
+            localStorage.setItem('modelFavorites', JSON.stringify(favorites));
+            return true;
+          }
+          return false;
+        } catch (err) {
+          console.error('添加模特收藏失败：', err);
+          return false;
+        }
+      }
+      
+      function removeModelFavorite(modelId) {
+        try {
+          const favorites = getModelFavorites();
+          const newFavorites = favorites.filter(id => id !== modelId);
+          localStorage.setItem('modelFavorites', JSON.stringify(newFavorites));
+          return true;
+        } catch (err) {
+          console.error('移除模特收藏失败：', err);
+          return false;
+        }
+      }
+      
+      function updateFavoriteButtons() {
+        // 更新模特收藏按钮状态
+        document.querySelectorAll('.model-favorite-btn').forEach(btn => {
+          const modelId = btn.dataset.modelId;
+          if (isModelFavorite(modelId)) {
+            btn.classList.add('favorited');
+            btn.title = '取消收藏';
+          } else {
+            btn.classList.remove('favorited');
+            btn.title = '收藏模特';
+          }
+        });
+      }
+      
+      // 加载保存的扫描结果
+      const loadSavedResult = async () => {
+        try {
+          const result = await window.electronAPI.loadScanResult();
+          if (!result || result.length === 0) return null;
+
+          // 渲染模特卡片
+          let html = '';
+          result.forEach(model => {
+            html += `
+              <div class="model-card" data-model-id="${model.id}">
+                <button class="model-favorite-btn" data-model-id="${model.id}" title="收藏模特"></button>
+                <img class="model-cover" src="" data-img-path="${model.cover}">
+                <div class="model-info">
+                  <div class="model-name">${model.name}</div>
+                  <div class="work-count">${model.works.length} 个作品</div>
+                </div>
+              </div>
+            `;
+          });
+          modelGrid.innerHTML = html;
+
+          // 加载封面图片
+          document.querySelectorAll('.model-card').forEach(async card => {
+            const imgPath = card.querySelector('.model-cover').dataset.imgPath;
+            const base64 = await window.electronAPI.getImageBase64(imgPath);
+            card.querySelector('.model-cover').src = base64;
+          });
+
+          // 更新收藏按钮状态
+          updateFavoriteButtons();
+
+          // 绑定卡片点击事件
+          document.querySelectorAll('.model-card').forEach(card => {
+            card.addEventListener('click', () => {
+              const modelId = card.dataset.modelId;
+              const modelData = result.find(m => m.id === modelId);
+              localStorage.setItem('selectedModel', JSON.stringify(modelData));
+              window.location.href = 'model-detail.html';
+            });
+          });
+
+          // 绑定收藏按钮事件
+          document.querySelectorAll('.model-favorite-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation(); // 阻止事件冒泡，避免跳转到模特详情页
+              const modelId = btn.dataset.modelId;
+              const isFav = isModelFavorite(modelId);
+              
+              if (isFav) {
+                removeModelFavorite(modelId);
+                btn.classList.remove('favorited');
+                btn.title = '收藏模特';
+              } else {
+                addModelFavorite(modelId);
+                btn.classList.add('favorited');
+                btn.title = '取消收藏';
+              }
+            });
+          });
+
+          return result;
+        } catch (err) {
+          console.error('加载失败:', err);
+          return null;
+        }
+      };
+
+      // 初始化右键菜单
+    const contextMenu = document.getElementById('model-context-menu');
+    let selectedModelCard = null;
+    let selectedModelId = null;
+    
+    // 为模特卡片添加右键菜单事件
+    document.addEventListener('contextmenu', (e) => {
+      const modelCard = e.target.closest('.model-card');
+      if (modelCard) {
+        e.preventDefault();
+        
+        // 显示右键菜单
+        contextMenu.style.display = 'block';
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.style.top = `${e.clientY}px`;
+        
+        // 保存选中的卡片
+        selectedModelCard = modelCard;
+        selectedModelId = modelCard.dataset.modelId;
+      }
+    });
+    
+    // 点击页面其他地方关闭右键菜单
+    document.addEventListener('click', () => {
+      contextMenu.style.display = 'none';
+    });
+    
+    // 更换封面功能
+    document.getElementById('change-cover').addEventListener('click', async () => {
+      if (!selectedModelId || !selectedModelCard) return;
+      
+      try {
+        // 获取当前模特的封面路径
+        const scanResult = await window.electronAPI.loadScanResult();
+        const selectedModel = scanResult.find(model => model.id === selectedModelId);
+        const currentCoverPath = selectedModel?.cover;
+        
+        // 提取当前封面的上一级目录作为defaultPath
+        const path = window.require('path');
+        const defaultPath = currentCoverPath ? path.dirname(path.dirname(currentCoverPath)) : '';
+        
+        // 使用electronAPI.showOpenDialog选择新封面
+        const result = await window.electronAPI.showOpenDialog({
+          properties: ['openFile'],
+          filters: [
+            { name: '图片文件', extensions: ['jpg', 'jpeg', 'png', 'gif'] }
+          ],
+          defaultPath: defaultPath
+        });
+        
+        if (!result.canceled && result.filePaths.length > 0) {
+          const newCoverPath = result.filePaths[0];
+          
+          // 更新模特卡片的封面
+          const imgElement = selectedModelCard.querySelector('.model-cover');
+          const base64 = await window.electronAPI.getImageBase64(newCoverPath);
+          imgElement.src = base64;
+          imgElement.dataset.imgPath = newCoverPath;
+          
+          // 更新保存的数据
+          const scanResult = await window.electronAPI.loadScanResult();
+          const modelIndex = scanResult.findIndex(model => model.id === selectedModelId);
+          if (modelIndex !== -1) {
+            scanResult[modelIndex].cover = newCoverPath;
+            await window.electronAPI.saveScanResult(scanResult);
+            // 同时更新localStorage，因为storage事件在同一窗口不触发
+            localStorage.setItem('scanResult', JSON.stringify(scanResult));
+          }
+        }
+      } catch (err) {
+        console.error('更换封面失败：', err);
+        alert('更换封面失败：' + err.message);
+      } finally {
+        contextMenu.style.display = 'none';
+      }
+    });
+    
+    // 删除模特功能
+    document.getElementById('delete-model').addEventListener('click', async () => {
+      if (!selectedModelId || !selectedModelCard) return;
+      
+      if (confirm('确定要删除该模特吗？此操作不可恢复。')) {
+        try {
+          // 获取当前扫描结果
+          const scanResult = await window.electronAPI.loadScanResult();
+          
+          // 过滤掉要删除的模特
+          const newScanResult = scanResult.filter(model => model.id !== selectedModelId);
+          
+          // 保存更新后的结果
+          await window.electronAPI.saveScanResult(newScanResult);
+          
+          // 从DOM中移除卡片
+          selectedModelCard.remove();
+          
+          // 如果没有模特了，显示空提示
+          if (document.querySelectorAll('.model-card').length === 0) {
+            modelGrid.innerHTML = '<div class="empty-tip">没有模特数据</div>';
+          }
+        } catch (err) {
+          console.error('删除模特失败：', err);
+          alert('删除模特失败：' + err.message);
+        } finally {
+          contextMenu.style.display = 'none';
+        }
+      } else {
+        contextMenu.style.display = 'none';
+      }
+    });
+
+    // 初始化加载
+    await loadSavedResult();
+
+    // 扫描按钮事件
+    document.getElementById('scan-btn').addEventListener('click', async () => {
+        modelGrid.innerHTML = '<div class="empty-tip">正在扫描...</div>';
+        try {
+          const newResult = await window.electronAPI.scanFolder();
+          if (newResult.length === 0) {
+            modelGrid.innerHTML = '<div class="empty-tip">未扫描到任何模特数据</div>';
+            return;
+          }
+
+          // 获取现有的扫描结果
+          const existingResult = await window.electronAPI.loadScanResult();
+          
+          // 合并新扫描结果与现有结果，避免覆盖
+          const mergedResult = mergeScanResults(existingResult, newResult);
+          
+          // 保存合并后的结果并重新加载
+          await window.electronAPI.saveScanResult(mergedResult);
+          await loadSavedResult();
+        } catch (err) {
+          modelGrid.innerHTML = `<div class="empty-tip" style="color:red;">扫描失败：${err.message}</div>`;
+        }
+      });
+      
+      // 合并扫描结果的函数
+      function mergeScanResults(existing, newResults) {
+        if (!existing || existing.length === 0) {
+          return newResults;
+        }
+        
+        // 创建现有模特的映射，以模特名称为键
+        const existingModelsMap = new Map(existing.map(model => [model.name, model]));
+        
+        // 处理新扫描的模特
+        newResults.forEach(newModel => {
+          if (existingModelsMap.has(newModel.name)) {
+            // 模特已存在，合并作品
+            const existingModel = existingModelsMap.get(newModel.name);
+            
+            // 创建现有作品的映射，以作品名称为键
+            const existingWorksMap = new Map(existingModel.works.map(work => [work.name, work]));
+            
+            // 处理新扫描的作品
+            newModel.works.forEach(newWork => {
+              if (!existingWorksMap.has(newWork.name)) {
+                // 作品不存在，添加到现有模特的作品列表
+                existingWorksMap.set(newWork.name, newWork);
+              } else {
+                // 作品已存在，保留现有作品
+                // 可以根据需要决定是否更新现有作品的信息
+              }
+            });
+            
+            // 更新模特的作品列表
+            existingModel.works = Array.from(existingWorksMap.values());
+            existingModel.cover = existingModel.works[0]?.cover || existingModel.cover;
+          } else {
+            // 模特不存在，添加到现有结果
+            existingModelsMap.set(newModel.name, newModel);
+          }
+        });
+        
+        // 将映射转换回数组并返回
+        return Array.from(existingModelsMap.values());
+      }
+
+      // 刷新按钮事件
+      document.getElementById('refresh-btn').addEventListener('click', async () => {
+        modelGrid.innerHTML = '<div class="empty-tip">正在刷新列表...</div>';
+        await loadSavedResult();
+      });
+    });
+  </script>
+</body>
+</html>

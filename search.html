@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>搜索 - 写真匣子</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+    /* 搜索页特定样式 */
+    .search-container {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    .search-input {
+      width: 100%;
+      padding: 15px;
+      font-size: 18px;
+      border: 3px solid #ccc;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      background: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+    }
+    .search-options {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .search-options label {
+      font-weight: bold;
+    }
+    .search-options select {
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+    }
+    .search-results {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .search-results .empty-results {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 50px 20px;
+      color: #666;
+    }
+    .work-card {
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative;
+    }
+    .work-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    .work-cover {
+      width: 100%;
+      height: 240px;
+      object-fit: cover;
+      background: #f0f0f0;
+      background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0xMDAgMjVjNDEuNDIgMCA3NSAzMy41OCA3NSA3NXMtMzMuNTggNzUtNzUgNzVTMjUgMTQxLjQyIDI1IDEwMCA1OC41OCAyNSAxMDAgMjV6bTAgMTIwYzU5LjU4IDAgMTA1LTQ1LjQyIDEwNS0xMDVTMTU5LjU4IDAgMTAwIDBTMjUgNDUuNDIgMjUgMTAwczQ1LjQyIDEwNSAxMDUgMTA1eiIvPjxwYXRoIGQ9Ik0xMDAgNzVWMTgwIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMTAiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvZz48L3N2Zz4=');
+      background-repeat: no-repeat;
+      background-position: center;
+    }
+    .work-info {
+      padding: 10px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- 左侧导航栏 -->
+  <nav class="sidebar">
+    <ul class="nav-menu">
+      <li class="nav-item"><a href="index.html" class="nav-link"><span class="nav-icon">🏠</span> 主页</a></li>
+      <li class="nav-item"><a href="search.html" class="nav-link active"><span class="nav-icon">🔍</span> 搜索</a></li>
+      <li class="nav-item"><a href="favorites.html" class="nav-link"><span class="nav-icon">⭐</span> 收藏</a></li>
+      <li class="nav-item"><a href="settings.html" class="nav-link"><span class="nav-icon">⚙️</span> 设置</a></li>
+      <li class="nav-item"><a href="about.html" class="nav-link"><span class="nav-icon">ℹ️</span> 关于</a></li>
+    </ul>
+  </nav>
+
+  <div class="main-content">
+    <div class="header">
+      <h1>搜索</h1>
+    </div>
+
+    <div class="search-container">
+      <input type="text" class="search-input" id="search-input" placeholder="请输入关键词搜索...">
+      <div class="search-options">
+        <label for="search-type">搜索类型：</label>
+        <select id="search-type">
+          <option value="all">全部</option>
+          <option value="model">模特</option>
+          <option value="work">作品</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="search-results" id="search-results">
+      <div class="empty-results">
+        <p>请输入关键词开始搜索</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="scripts/utils.js"></script>
+  <script src="scripts/nav-handler.js"></script>
+  <script>
+    // DOM元素
+    const searchInput = document.getElementById('search-input');
+    const searchType = document.getElementById('search-type');
+    const searchResults = document.getElementById('search-results');
+    
+    // 兼容API调用（与主页保持一致）
+    if (!window.electronAPI) {
+      window.electronAPI = {
+        scanFolder: () => window.require('electron').ipcRenderer.invoke('scanFolder'),
+        getImageBase64: (imagePath) => window.require('electron').ipcRenderer.invoke('getImageBase64', imagePath),
+        saveScanResult: (result) => window.require('electron').ipcRenderer.invoke('save-scan-result', result),
+        loadScanResult: () => window.require('electron').ipcRenderer.invoke('load-scan-result'),
+      };
+    }
+    
+    // 执行搜索
+     async function performSearch() {
+       const keyword = searchInput.value.trim().toLowerCase();
+       const type = searchType.value;
+       
+       if (!keyword) {
+         searchResults.innerHTML = `
+           <div class="empty-results">
+             <p>请输入关键词搜索...</p>
+           </div>
+         `;
+         return;
+       }
+       
+       searchResults.innerHTML = `
+         <div class="empty-results">
+           <p>正在搜索...</p>
+         </div>
+       `;
+       
+       try {
+         // 从主进程加载数据，与主页使用相同的方式
+         const scanResult = await window.electronAPI.loadScanResult();
+         
+         console.log('[搜索调试] 加载的扫描结果:', scanResult);
+         console.log('[搜索调试] 关键词:', keyword, '类型:', type);
+         
+         if (!scanResult || scanResult.length === 0) {
+           searchResults.innerHTML = `
+             <div class="empty-results">
+               <p>没有找到任何数据，请先扫描文件夹</p>
+             </div>
+           `;
+           return;
+         }
+         
+         // 收集搜索结果
+         const results = [];
+         
+         // 搜索模特：只添加匹配模特的代表作品（第一张）
+         if (type === 'all' || type === 'model') {
+           scanResult.forEach(model => {
+             // 检查模特名称是否匹配
+             if (model.name.toLowerCase().includes(keyword)) {
+               // 如果模特有作品，添加其第一张作品作为代表
+               if (model.works && model.works.length > 0) {
+                 results.push({
+                   ...model.works[0], // 使用第一张作品作为代表
+                   modelName: model.name,
+                   modelId: model.id,
+                   searchType: 'model', // 标记为模特搜索结果
+                   originalModelName: model.name // 保存原始模特名称用于显示
+                 });
+               }
+             }
+           });
+         }
+         
+         // 搜索作品：只添加匹配的作品
+         if (type === 'all' || type === 'work') {
+           scanResult.forEach(model => {
+             model.works.forEach(work => {
+               // 检查作品名称是否匹配
+               if (work.name.toLowerCase().includes(keyword)) {
+                 results.push({
+                   ...work,
+                   modelName: model.name,
+                   modelId: model.id,
+                   searchType: 'work', // 标记为作品搜索结果
+                   originalWorkName: work.name // 保存原始作品名称用于显示
+                 });
+               }
+             });
+           });
+         }
+         
+         // 去重处理：根据作品ID去重
+         const uniqueResults = [...new Map(results.map(item => [item.id, item])).values()];
+         
+         console.log('[搜索调试] 匹配的结果数量:', uniqueResults.length);
+         console.log('[搜索调试] 结果详情:', uniqueResults);
+         
+         // 显示搜索结果
+         if (uniqueResults.length === 0) {
+           searchResults.innerHTML = `
+             <div class="empty-results">
+               <p>没有找到匹配的结果</p>
+             </div>
+           `;
+           return;
+         }
+         
+         // 生成结果HTML
+         let html = '';
+         uniqueResults.forEach(result => {
+           // 根据搜索类型显示不同的标题
+           const displayTitle = result.searchType === 'model' ? result.originalModelName : result.originalWorkName;
+           
+           html += `
+             <div class="work-card" data-model-id="${result.modelId}" data-work-id="${result.id}">
+               <img class="work-cover" src="" data-img-path="${result.cover}">
+               <div class="work-info">
+                 <div style="font-weight: bold;">${displayTitle}</div>
+                 <div style="font-size:12px;color:#666">${result.searchType === 'model' ? '模特' : '作品'}</div>
+                 <div style="font-size:12px;color:#666">${result.modelName}</div>
+                 <div style="font-size:12px;color:#666">${result.images.length} 张图片</div>
+               </div>
+             </div>
+           `;
+         });
+         
+         searchResults.innerHTML = html;
+        
+        // 加载封面图片
+        document.querySelectorAll('.work-card').forEach(async card => {
+          const imgPath = card.querySelector('.work-cover').dataset.imgPath;
+          try {
+            if (typeof window.electronAPI !== 'undefined') {
+              const base64 = await window.electronAPI.getImageBase64(imgPath);
+              card.querySelector('.work-cover').src = base64;
+            }
+          } catch (err) {
+            console.error('加载封面图片失败：', err);
+          }
+        });
+      } catch (err) {
+        console.error('搜索过程中出现错误：', err);
+        searchResults.innerHTML = `
+          <div class="empty-results">
+            <p style="color: red;">搜索失败：${err.message}</p>
+          </div>
+        `;
+      }
+    }
+    
+    // 绑定事件
+    function bindEvents() {
+      // 搜索输入事件
+      searchInput.addEventListener('input', performSearch);
+      // 搜索类型改变事件
+      searchType.addEventListener('change', performSearch);
+      
+      // 作品卡片点击事件
+      searchResults.addEventListener('click', async (e) => {
+        const card = e.target.closest('.work-card');
+        if (card) {
+          const modelId = card.dataset.modelId;
+          
+          try {
+            // 从主进程加载数据
+            const scanResult = await window.electronAPI.loadScanResult();
+            
+            if (!scanResult || scanResult.length === 0) {
+              console.error('没有找到数据');
+              return;
+            }
+            
+            // 查找对应的模特
+            const model = scanResult.find(m => m.id === modelId);
+            
+            if (model) {
+              // 将模特数据保存到localStorage
+              localStorage.setItem('selectedModel', JSON.stringify(model));
+              // 跳转到作品详情页
+              window.location.href = 'model-detail.html';
+            } else {
+              console.error('没有找到对应的模特');
+            }
+          } catch (err) {
+            console.error('处理卡片点击事件时出错：', err);
+          }
+        }
+      });
+    }
+    
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      // 确保PhotoUtils已加载
+      if (typeof PhotoUtils === 'undefined') {
+        console.error('PhotoUtils未加载，请检查scripts/utils.js是否正确引入');
+        searchResults.innerHTML = `
+          <div class="empty-results">
+            <p style="color: red;">搜索功能初始化失败，请刷新页面重试</p>
+          </div>
+        `;
+        return;
+      }
+      
+      bindEvents();
+    });
+  </script>
+</body>
+</html>

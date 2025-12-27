@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>快捷键设置 - 写真匣子</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft Yahei"; }
+    body { padding: 20px; background: #f5f5f5; }
+    .container { max-width: 450px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; margin-bottom: 20px; color: #2c3e50; }
+    .shortcut-group { margin-bottom: 20px; }
+    .group-title { font-size: 16px; font-weight: bold; margin-bottom: 10px; color: #3498db; padding-bottom: 5px; border-bottom: 1px solid #eee; }
+    .shortcut-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+    .shortcut-label { font-size: 14px; color: #333; width: 180px; }
+    .shortcut-input { width: 180px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; text-align: center; }
+    .shortcut-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2); }
+    /* 简化的滚轮设置样式 */
+    .wheel-setting-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; }
+    .wheel-label { font-size: 14px; color: #333; width: 180px; }
+    .wheel-select { width: 180px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .btn-group { display: flex; justify-content: space-between; margin-top: 20px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .save-btn { background: #27ae60; color: white; } /* 加深绿色 */
+    .restore-btn { background: #8e44ad; color: white; } /* 加深紫色 */
+    .cancel-btn { background: #c0392b; color: white; } /* 加深红色 */
+    .status-tip { text-align: center; margin-top: 15px; font-size: 12px; color: #666; min-height: 16px; }
+    .success { color: #2ecc71; }
+    .error { color: #e74c3c; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <button class="btn btn-secondary" id="back-btn">返回</button>
+      <h2>快捷键设置</h2>
+      <div></div> <!-- 占位元素以保持标题居中 -->
+    </div>
+    
+    <!-- 基础功能组 -->
+    <div class="shortcut-group">
+      <div class="group-title">基础功能</div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">选择扫描目录</span>
+        <input type="text" id="scan-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">刷新列表</span>
+        <input type="text" id="refresh-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">退出应用</span>
+        <input type="text" id="quit-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">关于</span>
+        <input type="text" id="about-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+    </div>
+
+    <!-- 图片操作组 -->
+    <div class="shortcut-group">
+      <div class="group-title">图片查看器（键盘快捷键）</div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">下一张图片</span>
+        <input type="text" id="nextImage-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">上一张图片</span>
+        <input type="text" id="prevImage-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">放大图片</span>
+        <input type="text" id="zoomIn-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">缩小图片</span>
+        <input type="text" id="zoomOut-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">重置缩放</span>
+        <input type="text" id="resetZoom-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+      <div class="shortcut-item">
+        <span class="shortcut-label">关闭查看器</span>
+        <input type="text" id="closeViewer-shortcut" class="shortcut-input" placeholder="按下快捷键...">
+      </div>
+    </div>
+
+    <!-- 简化的滚轮设置：仅一个模式选择 + 缩放步长 -->
+    <div class="shortcut-group">
+      <div class="group-title">图片查看器（滚轮设置）</div>
+      <div class="wheel-setting-item">
+        <span class="wheel-label">滚轮操作模式</span>
+        <select id="wheel-mode" class="wheel-select">
+          <option value="page">滚轮翻页（向上/向左=上一张，向下/向右=下一张）</option>
+          <option value="zoom">滚轮缩放（向上=放大，向下=缩小）</option>
+          <option value="none">滚轮无操作</option>
+        </select>
+      </div>
+      <div class="wheel-setting-item">
+        <span class="wheel-label">缩放步长（仅缩放模式）</span>
+        <input type="number" id="zoom-step" class="shortcut-input" min="0.01" max="0.1" step="0.01" placeholder="0.05">
+      </div>
+    </div>
+    
+    <div class="btn-group">
+      <button class="btn restore-btn" id="restore-btn">恢复默认</button>
+      <button class="btn save-btn" id="save-btn">保存设置</button>
+      <button class="btn cancel-btn" id="cancel-btn">取消</button>
+    </div>
+    
+    <div class="status-tip" id="status-tip"></div>
+  </div>
+
+  <script>
+    const electron = window.require('electron');
+    const ipcRenderer = electron.ipcRenderer;
+
+    // 所有元素
+    const inputElements = {
+      scan: document.getElementById('scan-shortcut'),
+      refresh: document.getElementById('refresh-shortcut'),
+      quit: document.getElementById('quit-shortcut'),
+      about: document.getElementById('about-shortcut'),
+      nextImage: document.getElementById('nextImage-shortcut'),
+      prevImage: document.getElementById('prevImage-shortcut'),
+      zoomIn: document.getElementById('zoomIn-shortcut'),
+      zoomOut: document.getElementById('zoomOut-shortcut'),
+      resetZoom: document.getElementById('resetZoom-shortcut'),
+      closeViewer: document.getElementById('closeViewer-shortcut')
+    };
+    // 简化的滚轮设置元素
+    const wheelElements = {
+      wheelMode: document.getElementById('wheel-mode'),
+      zoomStep: document.getElementById('zoom-step')
+    };
+    const statusTip = document.getElementById('status-tip');
+
+    // 默认配置
+    const defaultShortcuts = {
+      scan: 'Ctrl+O',
+      refresh: 'Ctrl+R',
+      quit: 'Ctrl+Q',
+      about: 'F1',
+      nextImage: 'ArrowRight',
+      prevImage: 'ArrowLeft',
+      zoomIn: 'Ctrl+Plus',
+      zoomOut: 'Ctrl+Minus',
+      resetZoom: 'Ctrl+0',
+      closeViewer: 'Escape'
+    };
+    const defaultWheelSettings = {
+      wheelMode: 'zoom',  // 默认滚轮缩放
+      zoomStep: 0.05
+    };
+
+    // 加载所有配置
+    async function loadAllSettings() {
+      try {
+        // 加载快捷键
+        const shortcuts = await ipcRenderer.invoke('get-current-shortcuts');
+        Object.keys(inputElements).forEach(key => {
+          inputElements[key].value = shortcuts[key] || defaultShortcuts[key];
+        });
+        // 加载滚轮设置
+        const wheelSettings = await ipcRenderer.invoke('get-wheel-settings');
+        wheelElements.wheelMode.value = wheelSettings.wheelMode || defaultWheelSettings.wheelMode;
+        wheelElements.zoomStep.value = wheelSettings.zoomStep || defaultWheelSettings.zoomStep;
+        
+        showStatus('已加载所有配置', 'success');
+      } catch (err) {
+        console.error('加载配置失败：', err);
+        showStatus('加载失败，使用默认配置', 'error');
+        // 加载默认值
+        Object.keys(inputElements).forEach(key => {
+          inputElements[key].value = defaultShortcuts[key];
+        });
+        wheelElements.wheelMode.value = defaultWheelSettings.wheelMode;
+        wheelElements.zoomStep.value = defaultWheelSettings.zoomStep;
+      }
+    }
+
+    // 显示状态提示
+    function showStatus(message, type = 'normal') {
+      statusTip.textContent = message;
+      statusTip.className = 'status-tip ' + type;
+      setTimeout(() => {
+        statusTip.textContent = '';
+        statusTip.className = 'status-tip';
+      }, 3000);
+    }
+
+    // 快捷键捕获逻辑
+    function listenShortcutInput(input) {
+      let keys = [];
+      
+      input.addEventListener('focus', () => {
+        keys = [];
+        input.value = '';
+        showStatus('请按下想要设置的快捷键', 'normal');
+      });
+
+      input.addEventListener('keydown', (e) => {
+        e.preventDefault();
+        
+        keys = [];
+        if (e.ctrlKey) keys.push('Ctrl');
+        if (e.shiftKey) keys.push('Shift');
+        if (e.altKey) keys.push('Alt');
+        if (e.metaKey) keys.push('Meta');
+        
+        const keyMap = {
+          ' ': 'Space',
+          'Enter': 'Enter',
+          'Escape': 'Esc',
+          'ArrowUp': '↑',
+          'ArrowDown': '↓',
+          'ArrowLeft': '←',
+          'ArrowRight': '→',
+          'Backspace': 'Backspace',
+          'Delete': 'Del',
+          '+': 'Plus',
+          '-': 'Minus',
+          '=': 'Equal'
+        };
+        
+        const key = keyMap[e.key] || (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+        if (key && !['Control', 'Shift', 'Alt', 'Meta'].includes(key)) {
+          keys.push(key);
+        }
+        
+        input.value = keys.join('+') || '';
+      });
+
+      input.addEventListener('blur', () => {
+        if (!input.value) {
+          loadAllSettings();
+        }
+      });
+    }
+
+    // 绑定所有输入框
+    Object.values(inputElements).forEach(input => {
+      listenShortcutInput(input);
+    });
+
+    // 保存所有设置
+    document.getElementById('save-btn').addEventListener('click', async () => {
+      try {
+        // 收集快捷键
+        const newShortcuts = {};
+        Object.keys(inputElements).forEach(key => {
+          newShortcuts[key] = inputElements[key].value.trim() || defaultShortcuts[key];
+        });
+        // 收集滚轮设置
+        const newWheelSettings = {
+          wheelMode: wheelElements.wheelMode.value,
+          zoomStep: parseFloat(wheelElements.zoomStep.value) || defaultWheelSettings.zoomStep
+        };
+        
+        // 保存配置
+        const shortcutResult = await ipcRenderer.invoke('update-shortcuts', newShortcuts);
+        const wheelResult = await ipcRenderer.invoke('update-wheel-settings', newWheelSettings);
+        
+        if (shortcutResult.success && wheelResult.success) {
+          showStatus('所有设置已保存并生效', 'success');
+          setTimeout(() => window.close(), 1500);
+        } else {
+          showStatus('部分设置保存失败', 'error');
+        }
+      } catch (err) {
+        showStatus('保存失败：' + err.message, 'error');
+      }
+    });
+
+    // 恢复默认
+    document.getElementById('restore-btn').addEventListener('click', async () => {
+      try {
+        // 恢复默认配置
+        const shortcutResult = await ipcRenderer.invoke('restore-default-shortcuts');
+        const wheelResult = await ipcRenderer.invoke('restore-default-wheel-settings');
+        
+        if (shortcutResult.success && wheelResult.success) {
+          showStatus('已恢复所有默认设置', 'success');
+          loadAllSettings();
+        } else {
+          showStatus('恢复失败', 'error');
+        }
+      } catch (err) {
+        showStatus('恢复失败：' + err.message, 'error');
+      }
+    });
+
+    // 取消
+    document.getElementById('cancel-btn').addEventListener('click', () => {
+      window.location.href = 'settings.html';
+    });
+
+    // 返回上一页
+    document.getElementById('back-btn').addEventListener('click', () => {
+      window.location.href = 'settings.html';
+    });
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', () => {
+      loadAllSettings();
+    });
+  </script>
+</body>
+</html>
